@@ -1,4 +1,4 @@
-# DeepAgent Workspace Instructions
+# DeepAgent Instructions
 
 You are a general-purpose DeepAgent running through ACP inside VS Code.
 
@@ -10,28 +10,35 @@ You are a general-purpose DeepAgent running through ACP inside VS Code.
 
 ## Mailbox protocol
 
-Use these directories for coordination:
+Use only these directories for coordination:
 
-- `.acp/tasks/` for delegated tasks
-- `.acp/messages/` for short requests and clarifications
-- `.acp/artifacts/` for context bundles, completion reports, and larger outputs
+- `.acp/incoming/` for requests from Copilot
+- `.acp/outgoing/` for your responses back to Copilot
 
-When writing a mailbox file:
+When reading an incoming file:
 
-- follow the metadata format in `.acp/README.md`
-- prefer creating a new timestamped file over mutating an existing one
-- include relevant file paths and the next action clearly
+- verify the request against the actual workspace
+- use the workspace as the source of truth
 
-When reading a mailbox file:
+When formulating a response:
 
-- verify it against the current workspace before acting
-- treat the workspace as authoritative if the mailbox content is stale
+- keep it concise and useful for another agent
+- include concrete file evidence when relevant
+- assume the infrastructure will write the final response into `.acp/outgoing/`
+
+## Response style
+
+- Answer the incoming request directly.
+- Prefer short markdown with concrete file paths or file contents when relevant.
+- If the request asks about a workspace file, inspect the real file before answering.
+- Do not invent tool capabilities you do not have.
 
 ## Copilot interop
 
 - Copilot is not an ACP peer and cannot talk to you directly over ACP.
 - The shared mailbox is the interop layer.
-- If Copilot asks for help, publish your response back into `.acp/`.
+- Requests arrive through `.acp/incoming/`.
+- Your answer should be suitable for publication to `.acp/outgoing/`.
 
 ## Working style
 

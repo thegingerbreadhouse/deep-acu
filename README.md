@@ -5,18 +5,15 @@ This repo now contains a runnable DeepAgent ACP integration for VS Code, built a
 The setup has two layers:
 
 - a real ACP server launcher in `scripts/run_deepagent_acp.py`
-- a workspace-mediated mailbox in `.acp/` so DeepAgent and Copilot can hand work to each other without a custom VS Code extension
+- a simplified workspace mailbox in `.acp/incoming` and `.acp/outgoing`
 
 ## Repo layout
 
 - `.vscode/`: VS Code ACP client and interpreter configuration
-- `.acp/`: mailbox, artifacts, protocol templates, and watcher state
+- `.acp/`: incoming/outgoing mailbox and runtime state
 - `AGENTS.md`: persistent DeepAgent instructions
-- `skills/`: DeepAgent mailbox coordination guidance
-- `.github/prompts/`: Copilot prompt files for consume/delegate/request flows
 - `src/acp_mailbox/`: Python watcher and mailbox helpers
-- `scripts/run_deepagent_acp.py`: repo-local ACP launcher
-- `docs/`: source notes, empirical validation steps, and implementation constraints
+- `scripts/`: ACP launcher and ACP smoke test
 
 ## Dependencies
 
@@ -50,16 +47,13 @@ The workspace already includes `.vscode/settings.json` with an ACP agent entry t
 conda run --no-capture-output -n acp-deepagent-313 python scripts/run_deepagent_acp.py
 ```
 
-5. Optionally run the mailbox watcher from a shell:
+5. Run the mailbox poller from a shell when you want incoming requests to be processed automatically:
 
 ```bash
 PYTHONPATH=src conda run --no-capture-output -n acp-deepagent-313 python -m acp_mailbox.watcher
 ```
 
-6. In Copilot Chat, use one of the workspace prompt files:
-   - `delegate-to-deepagent`
-   - `request-deepagent-context`
-   - `consume-deepagent-artifact`
+6. Write markdown requests into `.acp/incoming/`. The poller will ask the ACP agent to fulfill them and will write the answer into `.acp/outgoing/`.
 
 ## ACP smoke test
 
@@ -88,15 +82,15 @@ At runtime it:
 
 - uses the ACP session `cwd` as the file-system root for the DeepAgent backend
 - loads repo instructions from `AGENTS.md`
-- loads mailbox guidance from `skills/`
 - enables checkpointing for conversation continuity
 - constructs `ChatGoogleGenerativeAI(model="gemini-2.5-flash", temperature=1.0, max_retries=2)` from the local `.env`
 
 ## Operating model
 
-- DeepAgent is a general-purpose agent. It can gather context, plan, implement, review, or hand work off.
-- Copilot is also a general-purpose agent, but it communicates with DeepAgent through workspace artifacts instead of a direct ACP channel.
-- Mailbox artifacts are markdown files with frontmatter-like metadata. They are designed to be inspectable by humans and easy for both agents to write.
+- DeepAgent is a general-purpose agent.
+- Copilot communicates with DeepAgent only by writing requests to `.acp/incoming/`.
+- DeepAgent responses for Copilot are written only to `.acp/outgoing/`.
+- The poller watches `.acp/incoming/`, invokes the ACP agent, and writes the response to `.acp/outgoing/`.
 
 ## Constraints
 
@@ -104,4 +98,24 @@ At runtime it:
 - No direct ACP notification path between Copilot and DeepAgent.
 - No unit tests in this phase. Validation is empirical and end-to-end.
 
-See [`docs/chub-and-source-notes.md`](docs/chub-and-source-notes.md) and [`docs/empirical-validation.md`](docs/empirical-validation.md) for the implementation basis and validation flow.
+## Minimal test
+
+1. Start the poller:
+
+```bash
+PYTHONPATH=src /opt/homebrew/Caskroom/miniconda/base/envs/acp-deepagent-313/bin/python -m acp_mailbox.watcher
+```
+
+2. Create an incoming request:
+
+```bash
+cat > .acp/incoming/gitignore-test.md <<'EOF'
+from: copilot
+to: deepagent
+---
+
+what are the contents of the .gitignore?
+EOF
+```
+
+3. Confirm the poller writes a response file in `.acp/outgoing/` containing the actual `.gitignore` contents.

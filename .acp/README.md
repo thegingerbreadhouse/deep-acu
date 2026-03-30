@@ -1,37 +1,47 @@
 # ACP Mailbox Protocol
 
-The `.acp/` tree is the shared interoperability surface between DeepAgent and Copilot.
+The `.acp/` tree has a single communication model:
 
-## Directories
+- `.acp/incoming/`: markdown requests from Copilot to the ACP DeepAgent
+- `.acp/outgoing/`: markdown responses from the ACP DeepAgent for Copilot
+- `.acp/state/`: poller/runtime state
 
-- `tasks/`: task requests and task state transitions
-- `messages/`: lightweight notifications and clarifications
-- `artifacts/`: larger outputs, context bundles, and completion reports
-- `templates/`: canonical markdown templates
-- `state/`: watcher runtime state; ignored by git
+No agent-to-agent communication should happen outside `incoming` and `outgoing`.
 
-## Metadata schema
+## Incoming format
 
-All mailbox files should begin with this metadata block:
+Each incoming file is markdown and should contain the request plainly. Minimal metadata is fine, but the body is the source of truth.
+
+Suggested shape:
 
 ```text
-id: <unique-id>
-from: <deepagent|copilot|user>
-to: <deepagent|copilot|user|all>
-kind: <task|message|context|completion|review>
-status: <new|in_progress|blocked|done|needs_review>
-related_files:
-  - path/one
-  - path/two
-next_action: <one-line instruction>
+from: copilot
+to: deepagent
 ---
+
+What are the contents of the .gitignore?
 ```
 
-Follow the metadata block with markdown body content.
+## Outgoing format
 
-## Conventions
+Each outgoing file is markdown written in response to one incoming file.
 
-- Use one file per exchange. Avoid silent overwrites.
-- Prefer append-only timestamps in filenames when creating new work items.
-- Use `current.md` only for intentionally mutable summary views.
-- Receiving agents must verify workspace reality before acting on a mailbox artifact.
+Suggested shape:
+
+```text
+from: deepagent
+to: copilot
+request_file: 20260329-...md
+status: done
+---
+
+# Response
+
+...
+```
+
+## Polling behavior
+
+- The poller watches `.acp/incoming/` for new or changed markdown files.
+- When a change is detected, it prompts the ACP agent with that request.
+- The poller writes the agent's answer to `.acp/outgoing/`.

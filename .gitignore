@@ -9,3 +9,7 @@ dist/
 build/
 *.pyc
 .acp/state/
+.acp/incoming/*.md
+!.acp/incoming/.gitkeep
+.acp/outgoing/*.md
+!.acp/outgoing/.gitkeep

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import logging
 import os
 from pathlib import Path
 
@@ -18,6 +19,18 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 
 
 DEFAULT_MODEL = "gemini-2.5-flash"
+
+
+def configure_logging(workspace_root: Path) -> None:
+    log_dir = workspace_root / ".acp" / "state"
+    log_dir.mkdir(parents=True, exist_ok=True)
+    log_path = log_dir / "deepagent-acp.log"
+    logging.basicConfig(
+        filename=log_path,
+        level=logging.INFO,
+        format="%(asctime)s %(levelname)s %(message)s",
+        force=True,
+    )
 
 
 def parse_args() -> argparse.Namespace:
@@ -52,7 +65,9 @@ def parse_args() -> argparse.Namespace:
 
 
 def resolve_workspace(raw_workspace: str | None) -> Path:
-    return Path(raw_workspace or os.getcwd()).resolve()
+    if raw_workspace:
+        return Path(raw_workspace).resolve()
+    return Path(__file__).resolve().parents[1]
 
 
 def build_model(model_name: str) -> ChatGoogleGenerativeAI:
@@ -69,7 +84,6 @@ def agent_factory(
     name: str,
     debug: bool,
 ):
-    skills_dir = workspace_root / "skills"
     memory_file = workspace_root / "AGENTS.md"
 
     def build_agent(context: AgentSessionContext):
@@ -79,7 +93,6 @@ def agent_factory(
             model=build_model(model),
             name=name,
             debug=debug,
-            skills=[str(skills_dir)] if skills_dir.exists() else None,
             memory=[str(memory_file)] if memory_file.exists() else None,
             backend=backend,
             checkpointer=InMemorySaver(),
@@ -97,6 +110,7 @@ def run_check(workspace_root: Path, model: str, name: str, debug: bool) -> int:
     install_placeholder_key_for_check(model)
     build_agent = agent_factory(workspace_root, model, name, debug)
     build_agent(AgentSessionContext(cwd=str(workspace_root), mode="default"))
+    logging.info("DeepAgent ACP check passed for workspace=%s model=%s", workspace_root, model)
     print(f"DeepAgent ACP configuration is valid for workspace: {workspace_root}")
     print(f"Model: {model}")
     print(f"Name: {name}")
@@ -106,16 +120,24 @@ def run_check(workspace_root: Path, model: str, name: str, debug: bool) -> int:
 def main() -> int:
     args = parse_args()
     workspace_root = resolve_workspace(args.workspace)
+    configure_logging(workspace_root)
+    logging.info("Starting DeepAgent ACP launcher in workspace=%s", workspace_root)
     load_dotenv(workspace_root / ".env")
+    logging.info("Loaded dotenv from %s", workspace_root / ".env")
     if args.check:
         return run_check(workspace_root, args.model, args.name, args.debug)
 
     server = AgentServerACP(
         agent_factory(workspace_root, args.model, args.name, args.debug)
     )
+    logging.info("Constructed AgentServerACP with model=%s name=%s", args.model, args.name)
     asyncio.run(run_acp_agent(server))
     return 0
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    try:
+        raise SystemExit(main())
+    except Exception:
+        logging.exception("DeepAgent ACP launcher crashed")
+        raise

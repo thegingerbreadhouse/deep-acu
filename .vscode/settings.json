@@ -1,14 +1,9 @@
 {
   "acp.agents": {
-    "DeepAgent ACP": {
-      "command": "conda",
+    "DeepAgent-ACP": {
+      "command": "/opt/homebrew/Caskroom/miniconda/base/envs/acp-deepagent-313/bin/python",
       "args": [
-        "run",
-        "--no-capture-output",
-        "-n",
-        "acp-deepagent-313",
-        "python",
-        "scripts/run_deepagent_acp.py"
+        "/Users/kateanderson/Documents/Programming/acp/scripts/run_deepagent_acp.py"
       ],
       "env": {
         "DEEPAGENT_MODEL": "gemini-2.5-flash"
@@ -17,5 +12,7 @@
   },
   "acp.defaultWorkingDirectory": "",
   "acp.logTraffic": true,
-  "python.defaultInterpreterPath": "/opt/homebrew/Caskroom/miniconda/base/envs/acp-deepagent-313/bin/python"
+  "python.defaultInterpreterPath": "/opt/homebrew/Caskroom/miniconda/base/envs/acp-deepagent-313/bin/python",
+  "python-envs.defaultEnvManager": "ms-python.python:conda",
+  "python-envs.defaultPackageManager": "ms-python.python:conda"
 }
