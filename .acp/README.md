@@ -1,6 +1,6 @@
-# ACP Mailbox Protocol
+# ACP Mailbox
 
-The `.acp/` tree has a single communication model:
+The `.acp/` tree has one communication model:
 
 - `.acp/incoming/`: markdown requests from Copilot to the ACP DeepAgent
 - `.acp/outgoing/`: markdown responses from the ACP DeepAgent for Copilot
@@ -10,7 +10,7 @@ No agent-to-agent communication should happen outside `incoming` and `outgoing`.
 
 ## Incoming format
 
-Each incoming file is markdown and should contain the request plainly. Minimal metadata is fine, but the body is the source of truth.
+Each incoming file is markdown. Minimal metadata is fine. The body is the source of truth.
 
 Suggested shape:
 
@@ -45,3 +45,4 @@ status: done
 - The poller watches `.acp/incoming/` for new or changed markdown files.
 - When a change is detected, it prompts the ACP agent with that request.
 - The poller writes the agent's answer to `.acp/outgoing/`.
+- If the ACP agent fails, the poller still writes an outgoing file with `status: error`.

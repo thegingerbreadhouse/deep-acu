@@ -72,6 +72,10 @@ def build_agent_prompt(rel_path: str) -> str:
 
 
 def write_outgoing(root: Path, incoming_path: Path, response_text: str) -> Path:
+    return write_outgoing_with_status(root, incoming_path, "done", response_text)
+
+
+def write_outgoing_with_status(root: Path, incoming_path: Path, status: str, response_text: str) -> Path:
     stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
     outgoing_dir = root / OUTGOING_DIR
     outgoing_dir.mkdir(parents=True, exist_ok=True)
@@ -80,7 +84,7 @@ def write_outgoing(root: Path, incoming_path: Path, response_text: str) -> Path:
         "from: deepagent\n"
         "to: copilot\n"
         f"request_file: {incoming_path.name}\n"
-        "status: done\n"
+        f"status: {status}\n"
         "---\n\n"
         "# Response\n\n"
         f"{response_text}\n"
@@ -91,8 +95,16 @@ def write_outgoing(root: Path, incoming_path: Path, response_text: str) -> Path:
 
 def process_event(root: Path, event: MailboxEvent) -> Path:
     rel_path = str(event.path.relative_to(root))
-    response_text = run_agent_prompt_sync(root, build_agent_prompt(rel_path))
-    outgoing_path = write_outgoing(root, event.path, response_text)
+    try:
+        response_text = run_agent_prompt_sync(root, build_agent_prompt(rel_path))
+        outgoing_path = write_outgoing(root, event.path, response_text)
+    except Exception as exc:
+        error_text = (
+            "The ACP agent could not complete this request.\n\n"
+            f"Error: `{type(exc).__name__}: {exc}`\n\n"
+            "Check `.acp/state/deepagent-acp.log` for runtime details."
+        )
+        outgoing_path = write_outgoing_with_status(root, event.path, "error", error_text)
     print(f"[mailbox] wrote response: {outgoing_path.relative_to(root)}")
     return outgoing_path
 

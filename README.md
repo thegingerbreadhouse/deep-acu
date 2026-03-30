@@ -1,19 +1,16 @@
-# DeepAgent ACP In VS Code
+# DeepAgent ACP MVP
 
-This repo now contains a runnable DeepAgent ACP integration for VS Code, built around the official Python `deepagents` and `deepagents-acp` packages and the `vscode-acp` extension.
-
-The setup has two layers:
-
-- a real ACP server launcher in `scripts/run_deepagent_acp.py`
-- a simplified workspace mailbox in `.acp/incoming` and `.acp/outgoing`
+This repo is a lean ACP-backed DeepAgent for VS Code plus a file-based mailbox for Copilot interoperability.
 
 ## Repo layout
 
-- `.vscode/`: VS Code ACP client and interpreter configuration
-- `.acp/`: incoming/outgoing mailbox and runtime state
-- `AGENTS.md`: persistent DeepAgent instructions
-- `src/acp_mailbox/`: Python watcher and mailbox helpers
-- `scripts/`: ACP launcher and ACP smoke test
+- `.vscode/`: ACP client launch config for VS Code
+- `.acp/`: mailbox directories and runtime state
+- `AGENTS.md`: persistent agent instructions
+- `scripts/run_deepagent_acp.py`: ACP server launcher
+- `scripts/acp_smoke_test.py`: direct stdio sanity check
+- `src/acp_mailbox/watcher.py`: poll `.acp/incoming/` and write `.acp/outgoing/`
+- `src/acp_mailbox/acp_runner.py`: invoke the ACP agent from the poller
 
 ## Dependencies
 
@@ -39,51 +36,31 @@ Installed packages:
 
 3. Open this workspace in VS Code.
 
-4. In the ACP Client panel, connect to `DeepAgent ACP`.
+4. In the ACP Client panel, connect to `DeepAgent-ACP`.
 
 The workspace already includes `.vscode/settings.json` with an ACP agent entry that launches:
 
 ```bash
-conda run --no-capture-output -n acp-deepagent-313 python scripts/run_deepagent_acp.py
+/opt/homebrew/Caskroom/miniconda/base/envs/acp-deepagent-313/bin/python /Users/kateanderson/Documents/Programming/acp/scripts/run_deepagent_acp.py
 ```
 
 5. Run the mailbox poller from a shell when you want incoming requests to be processed automatically:
 
 ```bash
-PYTHONPATH=src conda run --no-capture-output -n acp-deepagent-313 python -m acp_mailbox.watcher
+PYTHONPATH=src /opt/homebrew/Caskroom/miniconda/base/envs/acp-deepagent-313/bin/python -m acp_mailbox.watcher
 ```
 
-6. Write markdown requests into `.acp/incoming/`. The poller will ask the ACP agent to fulfill them and will write the answer into `.acp/outgoing/`.
+6. Write markdown requests into `.acp/incoming/`. The poller will ask the ACP agent to fulfill them and write the result into `.acp/outgoing/`.
 
-## ACP smoke test
+## Sanity checks
 
-Before using VS Code, you can verify the ACP server directly over stdio:
+Before using VS Code, verify the ACP server directly over stdio:
 
 ```bash
-conda run --no-capture-output -n acp-deepagent-313 python scripts/acp_smoke_test.py
+/opt/homebrew/Caskroom/miniconda/base/envs/acp-deepagent-313/bin/python scripts/acp_smoke_test.py
 ```
 
-Expected result:
-
-- ACP initialize succeeds
-- a new session is created
-- the prompt returns `ACP_SMOKE_OK`
-- the prompt response ends with `stop_reason='end_turn'`
-
-## ACP server behavior
-
-The launcher script uses the installed Python packages directly:
-
-- `deepagents.create_deep_agent(...)`
-- `deepagents_acp.server.AgentServerACP`
-- `deepagents_acp.server.run_acp_agent(...)`
-
-At runtime it:
-
-- uses the ACP session `cwd` as the file-system root for the DeepAgent backend
-- loads repo instructions from `AGENTS.md`
-- enables checkpointing for conversation continuity
-- constructs `ChatGoogleGenerativeAI(model="gemini-2.5-flash", temperature=1.0, max_retries=2)` from the local `.env`
+Expected result: ACP initializes, a session is created, and the prompt returns `ACP_SMOKE_OK`.
 
 ## Operating model
 
@@ -92,13 +69,7 @@ At runtime it:
 - DeepAgent responses for Copilot are written only to `.acp/outgoing/`.
 - The poller watches `.acp/incoming/`, invokes the ACP agent, and writes the response to `.acp/outgoing/`.
 
-## Constraints
-
-- No custom VS Code extension in v1.
-- No direct ACP notification path between Copilot and DeepAgent.
-- No unit tests in this phase. Validation is empirical and end-to-end.
-
-## Minimal test
+## Mailbox sanity test
 
 1. Start the poller:
 
@@ -108,14 +79,32 @@ PYTHONPATH=src /opt/homebrew/Caskroom/miniconda/base/envs/acp-deepagent-313/bin/
 
 2. Create an incoming request:
 
-```bash
-cat > .acp/incoming/gitignore-test.md <<'EOF'
+```text
 from: copilot
 to: deepagent
 ---
 
-what are the contents of the .gitignore?
-EOF
+What are the contents of the .gitignore?
 ```
 
-3. Confirm the poller writes a response file in `.acp/outgoing/` containing the actual `.gitignore` contents.
+3. Confirm the poller writes a response file in `.acp/outgoing/`.
+
+## Constraints
+
+- No custom VS Code extension in v1.
+- No direct ACP notification path between Copilot and DeepAgent.
+- No unit tests in this phase. Validation is empirical and end-to-end.
+
+## Lean scope
+
+This project intentionally contains only:
+
+- a DeepAgent ACP launcher for VS Code
+- a stdio ACP smoke test
+- an incoming/outgoing mailbox poller
+
+It does not include custom VS Code extensions, MCP orchestration, terminal tooling, or extra prompt scaffolding.
+
+## Operational note
+
+This setup depends on a working Gemini API key and available quota. If Gemini returns a quota or provider error, the poller writes an `error` response into `.acp/outgoing/` and the ACP launcher details remain in `.acp/state/deepagent-acp.log`.
