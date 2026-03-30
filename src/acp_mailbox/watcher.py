@@ -9,6 +9,7 @@ from datetime import datetime
 from pathlib import Path
 
 from .acp_runner import run_agent_prompt_sync
+from .observability import TurnLog, make_turn_id
 
 WATCH_DIR = Path(".acp/incoming")
 OUTGOING_DIR = Path(".acp/outgoing")
@@ -95,8 +96,19 @@ def write_outgoing_with_status(root: Path, incoming_path: Path, status: str, res
 
 def process_event(root: Path, event: MailboxEvent) -> Path:
     rel_path = str(event.path.relative_to(root))
+    turn_log = TurnLog(
+        repo_root=root,
+        turn_id=make_turn_id(),
+        prompt=build_agent_prompt(rel_path),
+        request_file=rel_path,
+    )
     try:
-        response_text = run_agent_prompt_sync(root, build_agent_prompt(rel_path))
+        response_text, turn_log = run_agent_prompt_sync(
+            root,
+            build_agent_prompt(rel_path),
+            turn_log=turn_log,
+            request_file=rel_path,
+        )
         outgoing_path = write_outgoing(root, event.path, response_text)
     except Exception as exc:
         error_text = (
@@ -105,6 +117,11 @@ def process_event(root: Path, event: MailboxEvent) -> Path:
             "Check `.acp/state/deepagent-acp.log` for runtime details."
         )
         outgoing_path = write_outgoing_with_status(root, event.path, "error", error_text)
+        turn_log.set_outgoing_file(outgoing_path)
+        turn_log.mark_error(exc)
+    else:
+        turn_log.set_outgoing_file(outgoing_path)
+        turn_log.mark_done()
     print(f"[mailbox] wrote response: {outgoing_path.relative_to(root)}")
     return outgoing_path
 

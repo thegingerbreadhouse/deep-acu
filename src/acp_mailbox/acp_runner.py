@@ -21,9 +21,12 @@ from acp.schema import (
     WriteTextFileResponse,
 )
 
+from .observability import TurnLog, make_turn_id
+
 
 @dataclass
 class CollectingClient:
+    turn_log: TurnLog
     chunks: list[str] = field(default_factory=list)
 
     def on_connect(self, conn: Any) -> None:
@@ -39,6 +42,7 @@ class CollectingClient:
         text = getattr(content, "text", None)
         if text:
             self.chunks.append(text)
+            self.turn_log.add_chunk(text)
 
     async def write_text_file(self, content: str, path: str, session_id: str, **kwargs: Any) -> WriteTextFileResponse | None:
         target = Path(path)
@@ -79,31 +83,55 @@ class CollectingClient:
         return None
 
 
-async def run_agent_prompt(repo_root: Path, prompt: str) -> str:
+async def run_agent_prompt(
+    repo_root: Path,
+    prompt: str,
+    *,
+    turn_log: TurnLog | None = None,
+    request_file: str | None = None,
+) -> tuple[str, TurnLog]:
     env = dict(os.environ)
-    client = CollectingClient()
+    active_turn_log = turn_log or TurnLog(
+        repo_root=repo_root,
+        turn_id=make_turn_id(),
+        prompt=prompt,
+        request_file=request_file,
+    )
+    client = CollectingClient(turn_log=active_turn_log)
     python_path = os.environ.get("DEEPAGENT_PYTHON", sys.executable)
     script_path = str((repo_root / "scripts" / "run_deepagent_acp.py").resolve())
 
-    async with spawn_agent_process(
-        client,
-        python_path,
-        script_path,
-        cwd=repo_root,
-        env=env,
-    ) as (conn, process):
-        await conn.initialize(
-            protocol_version=PROTOCOL_VERSION,
-            client_capabilities=ClientCapabilities(),
-            client_info=Implementation(name="acp-mailbox-poller", version="0.1.0"),
-        )
-        session = await conn.new_session(cwd=str(repo_root))
-        await conn.prompt([text_block(prompt)], session_id=session.session_id)
-        await asyncio.sleep(0.1)
-        if process.returncode not in (None, 0):
-            raise RuntimeError(f"ACP server exited with code {process.returncode}")
-    return "".join(client.chunks).strip()
+    try:
+        async with spawn_agent_process(
+            client,
+            python_path,
+            script_path,
+            cwd=repo_root,
+            env=env,
+        ) as (conn, process):
+            await conn.initialize(
+                protocol_version=PROTOCOL_VERSION,
+                client_capabilities=ClientCapabilities(),
+                client_info=Implementation(name="acp-mailbox-poller", version="0.1.0"),
+            )
+            session = await conn.new_session(cwd=str(repo_root))
+            active_turn_log.set_session(session.session_id)
+            await conn.prompt([text_block(prompt)], session_id=session.session_id)
+            await asyncio.sleep(0.1)
+            if process.returncode not in (None, 0):
+                raise RuntimeError(f"ACP server exited with code {process.returncode}")
+    except Exception as exc:
+        active_turn_log.mark_error(exc)
+        raise
+    active_turn_log.mark_done()
+    return "".join(client.chunks).strip(), active_turn_log
 
 
-def run_agent_prompt_sync(repo_root: Path, prompt: str) -> str:
-    return asyncio.run(run_agent_prompt(repo_root, prompt))
+def run_agent_prompt_sync(
+    repo_root: Path,
+    prompt: str,
+    *,
+    turn_log: TurnLog | None = None,
+    request_file: str | None = None,
+) -> tuple[str, TurnLog]:
+    return asyncio.run(run_agent_prompt(repo_root, prompt, turn_log=turn_log, request_file=request_file))
