@@ -25,9 +25,10 @@ Installed packages:
 ## Quick start
 
 1. Create and activate a local Python 3.13 environment, then install:
-   - `deepagents`
-   - `deepagents-acp`
-   - `langchain-google-genai`
+
+```bash
+pip install -r requirements.txt
+```
 
 2. Set your provider credentials by creating a local `.env` file from `.env.example` or exporting `GOOGLE_API_KEY` in your shell.
 
