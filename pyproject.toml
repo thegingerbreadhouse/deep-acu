@@ -1,0 +1,19 @@
+[project]
+name = "acp-deepagent-interop"
+version = "0.1.0"
+description = "Workspace-mediated interop layer for DeepAgent and GitHub Copilot"
+requires-python = ">=3.10"
+dependencies = []
+
+[project.scripts]
+acp-mailbox-watcher = "acp_mailbox.watcher:main"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]

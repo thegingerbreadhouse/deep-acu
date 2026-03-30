@@ -1,0 +1,11 @@
+.DS_Store
+.env
+.agents/
+__pycache__/
+.pytest_cache/
+.venv/
+.vscode-test/
+dist/
+build/
+*.pyc
+.acp/state/

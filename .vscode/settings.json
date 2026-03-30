@@ -1,0 +1,21 @@
+{
+  "acp.agents": {
+    "DeepAgent ACP": {
+      "command": "conda",
+      "args": [
+        "run",
+        "--no-capture-output",
+        "-n",
+        "acp-deepagent-313",
+        "python",
+        "scripts/run_deepagent_acp.py"
+      ],
+      "env": {
+        "DEEPAGENT_MODEL": "google_genai:gemini-2.5-pro"
+      }
+    }
+  },
+  "acp.defaultWorkingDirectory": "",
+  "acp.logTraffic": true,
+  "python.defaultInterpreterPath": "/opt/homebrew/Caskroom/miniconda/base/envs/acp-deepagent-313/bin/python"
+}
