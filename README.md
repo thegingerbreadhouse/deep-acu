@@ -61,6 +61,21 @@ PYTHONPATH=src conda run --no-capture-output -n acp-deepagent-313 python -m acp_
    - `request-deepagent-context`
    - `consume-deepagent-artifact`
 
+## ACP smoke test
+
+Before using VS Code, you can verify the ACP server directly over stdio:
+
+```bash
+conda run --no-capture-output -n acp-deepagent-313 python scripts/acp_smoke_test.py
+```
+
+Expected result:
+
+- ACP initialize succeeds
+- a new session is created
+- the prompt returns `ACP_SMOKE_OK`
+- the prompt response ends with `stop_reason='end_turn'`
+
 ## ACP server behavior
 
 The launcher script uses the installed Python packages directly:

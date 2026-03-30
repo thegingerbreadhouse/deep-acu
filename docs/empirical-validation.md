@@ -10,6 +10,16 @@ This repo intentionally avoids unit tests for the first phase. Validation should
 PYTHONPATH=src python -m acp_mailbox.watcher
 ```
 
+Optional ACP-only validation before opening VS Code:
+
+```bash
+conda run --no-capture-output -n acp-deepagent-313 python scripts/acp_smoke_test.py
+```
+
+Expected outcome:
+- ACP handshake succeeds over stdio
+- the server streams `ACP_SMOKE_OK`
+
 2. Start DeepAgent via `deepagents-acp` in `vscode-acp`.
 
 In VS Code:
@@ -44,6 +54,7 @@ Expected outcome:
 ## Success criteria
 
 - The `DeepAgent ACP` launcher constructs successfully in the configured Conda environment.
+- The ACP smoke test succeeds over stdio outside VS Code.
 - DeepAgent can publish arbitrary tasks or results, not just context.
 - Copilot can write DeepAgent-addressed requests using prompt-guided file output.
 - The watcher reliably surfaces inbound requests from Copilot.
