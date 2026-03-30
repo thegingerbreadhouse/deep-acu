@@ -75,7 +75,7 @@ At runtime it:
 - loads repo instructions from `AGENTS.md`
 - loads mailbox guidance from `skills/`
 - enables checkpointing for conversation continuity
-- defaults to `google_genai:gemini-2.5-pro`, overridable with `DEEPAGENT_MODEL`
+- constructs `ChatGoogleGenerativeAI(model="gemini-2.5-flash", temperature=1.0, max_retries=2)` from the local `.env`
 
 ## Operating model
 

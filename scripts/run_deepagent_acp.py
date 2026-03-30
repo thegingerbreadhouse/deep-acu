@@ -13,9 +13,11 @@ from deepagents_acp.server import (
     run_acp_agent,
 )
 from dotenv import load_dotenv
+from langgraph.checkpoint.memory import InMemorySaver
+from langchain_google_genai import ChatGoogleGenerativeAI
 
 
-DEFAULT_MODEL = "google_genai:gemini-2.5-pro"
+DEFAULT_MODEL = "gemini-2.5-flash"
 
 
 def parse_args() -> argparse.Namespace:
@@ -53,6 +55,14 @@ def resolve_workspace(raw_workspace: str | None) -> Path:
     return Path(raw_workspace or os.getcwd()).resolve()
 
 
+def build_model(model_name: str) -> ChatGoogleGenerativeAI:
+    return ChatGoogleGenerativeAI(
+        model=model_name,
+        max_retries=2,
+        temperature=1.0,
+    )
+
+
 def agent_factory(
     workspace_root: Path,
     model: str,
@@ -66,25 +76,20 @@ def agent_factory(
         session_root = Path(context.cwd or workspace_root).resolve()
         backend = FilesystemBackend(root_dir=session_root, virtual_mode=True)
         return create_deep_agent(
-            model=model,
+            model=build_model(model),
             name=name,
             debug=debug,
             skills=[str(skills_dir)] if skills_dir.exists() else None,
             memory=[str(memory_file)] if memory_file.exists() else None,
             backend=backend,
-            checkpointer=True,
+            checkpointer=InMemorySaver(),
         )
 
     return build_agent
 
 
 def install_placeholder_key_for_check(model: str) -> None:
-    provider = model.split(":", 1)[0] if ":" in model else ""
-    if provider == "openai" and not os.environ.get("OPENAI_API_KEY"):
-        os.environ["OPENAI_API_KEY"] = "placeholder-check-key"
-    if provider == "anthropic" and not os.environ.get("ANTHROPIC_API_KEY"):
-        os.environ["ANTHROPIC_API_KEY"] = "placeholder-check-key"
-    if provider in {"google", "google_genai"} and not os.environ.get("GOOGLE_API_KEY"):
+    if not os.environ.get("GOOGLE_API_KEY"):
         os.environ["GOOGLE_API_KEY"] = "placeholder-check-key"
 
 
