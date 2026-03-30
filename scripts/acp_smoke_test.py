@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import os
+import sys
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -84,16 +85,13 @@ async def main() -> int:
 
     env = dict(os.environ)
     client = SmokeClient()
+    python_path = os.environ.get("DEEPAGENT_PYTHON", sys.executable)
+    script_path = str((repo_root / "scripts" / "run_deepagent_acp.py").resolve())
 
     async with spawn_agent_process(
         client,
-        "conda",
-        "run",
-        "--no-capture-output",
-        "-n",
-        "acp-deepagent-313",
-        "python",
-        "scripts/run_deepagent_acp.py",
+        python_path,
+        script_path,
         cwd=repo_root,
         env=env,
     ) as (conn, process):

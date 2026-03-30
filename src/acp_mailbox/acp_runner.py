@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import os
+import sys
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -81,7 +82,7 @@ class CollectingClient:
 async def run_agent_prompt(repo_root: Path, prompt: str) -> str:
     env = dict(os.environ)
     client = CollectingClient()
-    python_path = "/opt/homebrew/Caskroom/miniconda/base/envs/acp-deepagent-313/bin/python"
+    python_path = os.environ.get("DEEPAGENT_PYTHON", sys.executable)
     script_path = str((repo_root / "scripts" / "run_deepagent_acp.py").resolve())
 
     async with spawn_agent_process(

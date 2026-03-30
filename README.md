@@ -14,10 +14,7 @@ This repo is a lean ACP-backed DeepAgent for VS Code plus a file-based mailbox f
 
 ## Dependencies
 
-This repo is configured for the Conda environment:
-
-- name: `acp-deepagent-313`
-- python: `3.13`
+Use a local Python 3.13 environment. Conda is the expected setup, but the repo no longer assumes a machine-specific environment name or interpreter path.
 
 Installed packages:
 
@@ -27,37 +24,45 @@ Installed packages:
 
 ## Quick start
 
-1. Set your provider credentials by creating a local `.env` file from `.env.example` or exporting `GOOGLE_API_KEY` in your shell.
+1. Create and activate a local Python 3.13 environment, then install:
+   - `deepagents`
+   - `deepagents-acp`
+   - `langchain-google-genai`
 
-2. Install the recommended VS Code extensions:
+2. Set your provider credentials by creating a local `.env` file from `.env.example` or exporting `GOOGLE_API_KEY` in your shell.
+
+3. Install the recommended VS Code extensions:
    - `formulahendry.acp-client`
    - `github.copilot-chat`
    - `ms-python.python`
 
-3. Open this workspace in VS Code.
+4. Open this workspace in VS Code.
 
-4. In the ACP Client panel, connect to `DeepAgent-ACP`.
+5. Copy `.vscode/settings.example.json` to a local `.vscode/settings.json` and edit the Python path to match your environment.
+   The local `.vscode/settings.json` file is intentionally gitignored.
 
-The workspace already includes `.vscode/settings.json` with an ACP agent entry that launches:
+6. In the ACP Client panel, connect to `DeepAgent-ACP`.
 
-```bash
-/opt/homebrew/Caskroom/miniconda/base/envs/acp-deepagent-313/bin/python /Users/kateanderson/Documents/Programming/acp/scripts/run_deepagent_acp.py
-```
-
-5. Run the mailbox poller from a shell when you want incoming requests to be processed automatically:
+The example settings file launches:
 
 ```bash
-PYTHONPATH=src /opt/homebrew/Caskroom/miniconda/base/envs/acp-deepagent-313/bin/python -m acp_mailbox.watcher
+/absolute/path/to/your/python ${workspaceFolder}/scripts/run_deepagent_acp.py
 ```
 
-6. Write markdown requests into `.acp/incoming/`. The poller will ask the ACP agent to fulfill them and write the result into `.acp/outgoing/`.
+7. Run the mailbox poller from a shell when you want incoming requests to be processed automatically:
+
+```bash
+PYTHONPATH=src python -m acp_mailbox.watcher
+```
+
+8. Write markdown requests into `.acp/incoming/`. The poller will ask the ACP agent to fulfill them and write the result into `.acp/outgoing/`.
 
 ## Sanity checks
 
 Before using VS Code, verify the ACP server directly over stdio:
 
 ```bash
-/opt/homebrew/Caskroom/miniconda/base/envs/acp-deepagent-313/bin/python scripts/acp_smoke_test.py
+python scripts/acp_smoke_test.py
 ```
 
 Expected result: ACP initializes, a session is created, and the prompt returns `ACP_SMOKE_OK`.
@@ -74,7 +79,7 @@ Expected result: ACP initializes, a session is created, and the prompt returns `
 1. Start the poller:
 
 ```bash
-PYTHONPATH=src /opt/homebrew/Caskroom/miniconda/base/envs/acp-deepagent-313/bin/python -m acp_mailbox.watcher
+PYTHONPATH=src python -m acp_mailbox.watcher
 ```
 
 2. Create an incoming request:
