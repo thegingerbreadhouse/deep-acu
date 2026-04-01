@@ -2,6 +2,8 @@
 
 This repo is a lean ACP-backed DeepAgent for VS Code plus a file-based mailbox for Copilot interoperability.
 
+The LLM boundary is a LangChain `BaseChatModel`. The ACP launcher can use any LangChain chat model as long as your configured factory returns a `BaseChatModel` instance.
+
 ## Repo layout
 
 - `.vscode/`: ACP client launch config for VS Code
@@ -16,10 +18,14 @@ This repo is a lean ACP-backed DeepAgent for VS Code plus a file-based mailbox f
 
 Use a local Python 3.13 environment. Conda is the expected setup, but the repo no longer assumes a machine-specific environment name or interpreter path.
 
-Installed packages:
+Core packages:
 
 - `deepagents`
 - `deepagents-acp`
+- `python-dotenv`
+
+Default example provider package:
+
 - `langchain-google-genai`
 
 ## Quick start
@@ -30,21 +36,25 @@ Installed packages:
 pip install -r requirements.txt
 ```
 
-2. Set your provider credentials by creating a local `.env` file from `.env.example` or exporting `GOOGLE_API_KEY` in your shell.
+2. Choose your LangChain chat model strategy:
+   - easiest path: use the default factory in [model_loader.py](/Users/kateanderson/Documents/Programming/acp/src/acp_mailbox/model_loader.py), which currently builds a Gemini chat model
+   - custom path: point `DEEPAGENT_MODEL_FACTORY` at your own `module:function` that returns a LangChain `BaseChatModel`
 
-3. Install the recommended VS Code extensions:
+3. Set your model-specific credentials by creating a local `.env` file from `.env.example` and updating the values for your chosen provider.
+
+4. Install the recommended VS Code extensions:
    - `formulahendry.acp-client`
    - `github.copilot-chat`
    - `ms-python.python`
 
-4. Open this workspace in VS Code.
+5. Open this workspace in VS Code.
 
-5. Copy `.vscode/settings.example.json` to a local `.vscode/settings.json` and edit both absolute paths to match your environment:
+6. Copy `.vscode/settings.example.json` to a local `.vscode/settings.json` and edit both absolute paths to match your environment:
    - the Python interpreter path
    - the repo-local `scripts/run_deepagent_acp.py` path
    The local `.vscode/settings.json` file is intentionally gitignored.
 
-6. In the ACP Client panel, connect to `DeepAgent-ACP`.
+7. In the ACP Client panel, connect to `DeepAgent-ACP`.
 
 The example settings file launches:
 
@@ -52,13 +62,13 @@ The example settings file launches:
 /absolute/path/to/your/python /absolute/path/to/your/repo/scripts/run_deepagent_acp.py
 ```
 
-7. Run the mailbox poller from a shell when you want incoming requests to be processed automatically:
+8. Run the mailbox poller from a shell when you want incoming requests to be processed automatically:
 
 ```bash
 PYTHONPATH=src python -m acp_mailbox.watcher
 ```
 
-8. Write markdown requests into `.acp/incoming/`. The poller will ask the ACP agent to fulfill them and write the result into `.acp/outgoing/`.
+9. Write markdown requests into `.acp/incoming/`. The poller will ask the ACP agent to fulfill them and write the result into `.acp/outgoing/`.
 
 ## Sanity checks
 
@@ -69,6 +79,16 @@ python scripts/acp_smoke_test.py
 ```
 
 Expected result: ACP initializes, a session is created, and the prompt returns `ACP_SMOKE_OK`.
+
+## Model abstraction
+
+- The ACP launcher expects a LangChain `BaseChatModel`, not a provider-specific class.
+- Configure the loader with `DEEPAGENT_MODEL_FACTORY=module.path:function_name`.
+- The factory function must accept:
+  - `workspace_root: Path`
+  - `callbacks: list[BaseCallbackHandler]`
+- The factory function must return a LangChain `BaseChatModel`.
+- The built-in default factory lives in [model_loader.py](/Users/kateanderson/Documents/Programming/acp/src/acp_mailbox/model_loader.py) and uses Gemini only as an example.
 
 ## Operating model
 
@@ -120,4 +140,4 @@ It does not include custom VS Code extensions, MCP orchestration, terminal tooli
 
 ## Operational note
 
-This setup depends on a working Gemini API key and available quota. If Gemini returns a quota or provider error, the poller writes an `error` response into `.acp/outgoing/` and the ACP launcher details remain in the dated log file under `.acp/state/`.
+This setup depends on a working model provider configuration. If the active `BaseChatModel` fails or the provider is unavailable, the poller writes an `error` response into `.acp/outgoing/` and the ACP launcher details remain in the dated log file under `.acp/state/`.

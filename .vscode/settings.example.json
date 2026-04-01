@@ -6,6 +6,7 @@
         "/absolute/path/to/your/repo/scripts/run_deepagent_acp.py"
       ],
       "env": {
+        "DEEPAGENT_MODEL_FACTORY": "acp_mailbox.model_loader:build_default_chat_model",
         "DEEPAGENT_MODEL": "gemini-2.5-flash"
       }
     }

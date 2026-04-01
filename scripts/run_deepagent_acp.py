@@ -19,10 +19,6 @@ from deepagents_acp.server import (
 )
 from dotenv import load_dotenv
 from langgraph.checkpoint.memory import InMemorySaver
-from langchain_google_genai import ChatGoogleGenerativeAI
-
-
-DEFAULT_MODEL = "gemini-2.5-flash"
 
 
 def make_attempt_id() -> str:
@@ -64,8 +60,8 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--model",
-        default=os.environ.get("DEEPAGENT_MODEL", DEFAULT_MODEL),
-        help="Provider-qualified LangChain model string.",
+        default=os.environ.get("DEEPAGENT_MODEL"),
+        help="Optional model identifier for the default model factory.",
     )
     parser.add_argument(
         "--name",
@@ -92,24 +88,22 @@ def resolve_workspace(raw_workspace: str | None) -> Path:
     return Path(__file__).resolve().parents[1]
 
 
-def build_model(model_name: str, workspace_root: Path) -> ChatGoogleGenerativeAI:
+def build_model(workspace_root: Path):
     src_path = workspace_root / "src"
     if str(src_path) not in sys.path:
         sys.path.insert(0, str(src_path))
     from acp_mailbox.langchain_observer import LangChainObservabilityHandler
+    from acp_mailbox.model_loader import load_chat_model
 
-    return ChatGoogleGenerativeAI(
-        model=model_name,
-        max_retries=2,
-        temperature=1.0,
-        include_thoughts=True,
+    return load_chat_model(
+        workspace_root=workspace_root,
         callbacks=[LangChainObservabilityHandler()],
     )
 
 
 def agent_factory(
     workspace_root: Path,
-    model: str,
+    model: str | None,
     name: str,
     debug: bool,
 ):
@@ -119,7 +113,7 @@ def agent_factory(
         session_root = Path(context.cwd or workspace_root).resolve()
         backend = FilesystemBackend(root_dir=session_root, virtual_mode=True)
         return create_deep_agent(
-            model=build_model(model, workspace_root),
+            model=build_model(workspace_root),
             name=name,
             debug=debug,
             memory=[str(memory_file)] if memory_file.exists() else None,
@@ -130,18 +124,28 @@ def agent_factory(
     return build_agent
 
 
-def install_placeholder_key_for_check(model: str) -> None:
+def install_placeholder_key_for_check(model: str | None) -> None:
+    if os.environ.get("DEEPAGENT_MODEL_FACTORY"):
+        return
     if not os.environ.get("GOOGLE_API_KEY"):
         os.environ["GOOGLE_API_KEY"] = "placeholder-check-key"
 
 
-def run_check(workspace_root: Path, model: str, name: str, debug: bool) -> int:
+def run_check(workspace_root: Path, model: str | None, name: str, debug: bool) -> int:
     install_placeholder_key_for_check(model)
     build_agent = agent_factory(workspace_root, model, name, debug)
     build_agent(AgentSessionContext(cwd=str(workspace_root), mode="default"))
-    logging.info("DeepAgent ACP check passed for workspace=%s model=%s", workspace_root, model)
+    model_factory = os.environ.get("DEEPAGENT_MODEL_FACTORY", "acp_mailbox.model_loader:build_default_chat_model")
+    logging.info(
+        "DeepAgent ACP check passed for workspace=%s model=%s model_factory=%s",
+        workspace_root,
+        model,
+        model_factory,
+    )
     print(f"DeepAgent ACP configuration is valid for workspace: {workspace_root}")
-    print(f"Model: {model}")
+    print(f"Model factory: {model_factory}")
+    if model:
+        print(f"Default model hint: {model}")
     print(f"Name: {name}")
     return 0
 
