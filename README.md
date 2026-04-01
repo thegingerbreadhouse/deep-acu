@@ -39,7 +39,9 @@ pip install -r requirements.txt
 
 4. Open this workspace in VS Code.
 
-5. Copy `.vscode/settings.example.json` to a local `.vscode/settings.json` and edit the Python path to match your environment.
+5. Copy `.vscode/settings.example.json` to a local `.vscode/settings.json` and edit both absolute paths to match your environment:
+   - the Python interpreter path
+   - the repo-local `scripts/run_deepagent_acp.py` path
    The local `.vscode/settings.json` file is intentionally gitignored.
 
 6. In the ACP Client panel, connect to `DeepAgent-ACP`.
@@ -47,7 +49,7 @@ pip install -r requirements.txt
 The example settings file launches:
 
 ```bash
-/absolute/path/to/your/python ${workspaceFolder}/scripts/run_deepagent_acp.py
+/absolute/path/to/your/python /absolute/path/to/your/repo/scripts/run_deepagent_acp.py
 ```
 
 7. Run the mailbox poller from a shell when you want incoming requests to be processed automatically:
@@ -77,6 +79,8 @@ Expected result: ACP initializes, a session is created, and the prompt returns `
 - Each mailbox turn also writes observability artifacts to `.acp/state/observability/`:
   - `<turn-id>.json`: turn summary, status, session ID, token counts, reasoning-token counts
   - `<turn-id>.events.jsonl`: raw LangChain model/tool events for that turn
+- ACP launcher logs are written per date under `.acp/state/deepagent-acp-YYYY-MM-DD.log`.
+- Each launcher attempt is separated by a clear attempt header and attempt ID.
 
 ## Mailbox sanity test
 
@@ -116,4 +120,4 @@ It does not include custom VS Code extensions, MCP orchestration, terminal tooli
 
 ## Operational note
 
-This setup depends on a working Gemini API key and available quota. If Gemini returns a quota or provider error, the poller writes an `error` response into `.acp/outgoing/` and the ACP launcher details remain in `.acp/state/deepagent-acp.log`.
+This setup depends on a working Gemini API key and available quota. If Gemini returns a quota or provider error, the poller writes an `error` response into `.acp/outgoing/` and the ACP launcher details remain in the dated log file under `.acp/state/`.

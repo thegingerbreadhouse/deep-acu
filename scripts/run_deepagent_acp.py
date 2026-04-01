@@ -2,10 +2,13 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+from datetime import UTC, datetime
 import logging
 import os
 from pathlib import Path
 import sys
+import traceback
+from uuid import uuid4
 
 from deepagents import create_deep_agent
 from deepagents_acp.server import (
@@ -22,16 +25,34 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 DEFAULT_MODEL = "gemini-2.5-flash"
 
 
-def configure_logging(workspace_root: Path) -> None:
+def make_attempt_id() -> str:
+    stamp = datetime.now(UTC).strftime("%H%M%S")
+    return f"{stamp}-{os.getpid()}-{uuid4().hex[:6]}"
+
+
+def configure_logging(workspace_root: Path) -> tuple[Path, str]:
     log_dir = workspace_root / ".acp" / "state"
     log_dir.mkdir(parents=True, exist_ok=True)
-    log_path = log_dir / "deepagent-acp.log"
+    log_date = datetime.now(UTC).strftime("%Y-%m-%d")
+    log_path = log_dir / f"deepagent-acp-{log_date}.log"
+    attempt_id = make_attempt_id()
+    file_handler = logging.FileHandler(log_path)
+    file_handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(message)s"))
     logging.basicConfig(
-        filename=log_path,
+        handlers=[file_handler],
         level=logging.INFO,
-        format="%(asctime)s %(levelname)s %(message)s",
         force=True,
     )
+    logger = logging.getLogger("deepagent_acp")
+    logger.info("=" * 80)
+    logger.info(
+        "ACP launch attempt start attempt_id=%s pid=%s python=%s cwd=%s",
+        attempt_id,
+        os.getpid(),
+        sys.executable,
+        Path.cwd(),
+    )
+    return log_path, attempt_id
 
 
 def parse_args() -> argparse.Namespace:
@@ -125,21 +146,59 @@ def run_check(workspace_root: Path, model: str, name: str, debug: bool) -> int:
     return 0
 
 
+async def serve(server: AgentServerACP, attempt_id: str) -> None:
+    loop = asyncio.get_running_loop()
+    logger = logging.getLogger("deepagent_acp")
+
+    def handle_async_exception(loop: asyncio.AbstractEventLoop, context: dict[str, object]) -> None:
+        message = context.get("message", "Unhandled asyncio exception")
+        exception = context.get("exception")
+        logger.error("Async runtime error attempt_id=%s message=%s", attempt_id, message)
+        if exception:
+            logger.error(
+                "Async exception traceback attempt_id=%s\n%s",
+                attempt_id,
+                "".join(traceback.format_exception(type(exception), exception, exception.__traceback__)),
+            )
+        else:
+            logger.error("Async context attempt_id=%s context=%r", attempt_id, context)
+
+    loop.set_exception_handler(handle_async_exception)
+    try:
+        await run_acp_agent(server)
+    except Exception:
+        logger.exception("ACP serve loop crashed attempt_id=%s", attempt_id)
+        raise
+    finally:
+        logger.info("ACP launch attempt end attempt_id=%s", attempt_id)
+
+
 def main() -> int:
     args = parse_args()
     workspace_root = resolve_workspace(args.workspace)
-    configure_logging(workspace_root)
-    logging.info("Starting DeepAgent ACP launcher in workspace=%s", workspace_root)
+    log_path, attempt_id = configure_logging(workspace_root)
+    logging.info(
+        "Starting DeepAgent ACP launcher attempt_id=%s workspace=%s log_path=%s",
+        attempt_id,
+        workspace_root,
+        log_path,
+    )
     load_dotenv(workspace_root / ".env")
-    logging.info("Loaded dotenv from %s", workspace_root / ".env")
+    logging.info("Loaded dotenv attempt_id=%s from=%s", attempt_id, workspace_root / ".env")
     if args.check:
         return run_check(workspace_root, args.model, args.name, args.debug)
 
     server = AgentServerACP(
         agent_factory(workspace_root, args.model, args.name, args.debug)
     )
-    logging.info("Constructed AgentServerACP with model=%s name=%s", args.model, args.name)
-    asyncio.run(run_acp_agent(server))
+    logging.info(
+        "Constructed AgentServerACP attempt_id=%s model=%s name=%s debug=%s",
+        attempt_id,
+        args.model,
+        args.name,
+        args.debug,
+    )
+    asyncio.run(serve(server, attempt_id))
     return 0
 
 

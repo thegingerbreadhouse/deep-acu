@@ -3,7 +3,7 @@
     "DeepAgent-ACP": {
       "command": "/absolute/path/to/your/python",
       "args": [
-        "${workspaceFolder}/scripts/run_deepagent_acp.py"
+        "/absolute/path/to/your/repo/scripts/run_deepagent_acp.py"
       ],
       "env": {
         "DEEPAGENT_MODEL": "gemini-2.5-flash"
