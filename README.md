@@ -9,10 +9,10 @@ The LLM boundary is a LangChain `BaseChatModel`. The ACP launcher can use any La
 - `.vscode/`: ACP client launch config for VS Code
 - `.acp/`: mailbox directories and runtime state
 - `AGENTS.md`: persistent agent instructions
-- `scripts/run_deepagent_acp.py`: ACP server launcher
-- `scripts/acp_smoke_test.py`: direct stdio sanity check
-- `src/acp_mailbox/watcher.py`: poll `.acp/incoming/` and write `.acp/outgoing/`
-- `src/acp_mailbox/acp_runner.py`: invoke the ACP agent from the poller
+- `deepagent_acp/server.py`: ACP server launcher
+- `deepagent_acp/smoke_test.py`: direct stdio sanity check
+- `deepagent_acp/watcher.py`: poll `.acp/incoming/` and write `.acp/outgoing/`
+- `deepagent_acp/`: shared runtime code for model loading, observability, and ACP bridging
 
 ## Dependencies
 
@@ -37,7 +37,7 @@ pip install -r requirements.txt
 ```
 
 2. Choose your LangChain chat model strategy:
-   - easiest path: use the default factory in [model_loader.py](/Users/kateanderson/Documents/Programming/acp/src/acp_mailbox/model_loader.py), which currently builds a Gemini chat model
+   - easiest path: use the default factory in [model_loader.py](/Users/kateanderson/Documents/Programming/acp/deepagent_acp/model_loader.py), which currently builds a Gemini chat model
    - custom path: point `DEEPAGENT_MODEL_FACTORY` at your own `module:function` that returns a LangChain `BaseChatModel`
 
 3. Set your model-specific credentials by creating a local `.env` file from `.env.example` and updating the values for your chosen provider.
@@ -51,7 +51,7 @@ pip install -r requirements.txt
 
 6. Copy `.vscode/settings.example.json` to a local `.vscode/settings.json` and edit both absolute paths to match your environment:
    - the Python interpreter path
-   - the repo-local `scripts/run_deepagent_acp.py` path
+   - the repo-local `deepagent_acp/server.py` path
    The local `.vscode/settings.json` file is intentionally gitignored.
 
 7. In the ACP Client panel, connect to `DeepAgent-ACP`.
@@ -59,13 +59,13 @@ pip install -r requirements.txt
 The example settings file launches:
 
 ```bash
-/absolute/path/to/your/python /absolute/path/to/your/repo/scripts/run_deepagent_acp.py
+/absolute/path/to/your/python /absolute/path/to/your/repo/deepagent_acp/server.py
 ```
 
 8. Run the mailbox poller from a shell when you want incoming requests to be processed automatically:
 
 ```bash
-PYTHONPATH=src python -m acp_mailbox.watcher
+python -m deepagent_acp.watcher
 ```
 
 9. Write markdown requests into `.acp/incoming/`. The poller will ask the ACP agent to fulfill them and write the result into `.acp/outgoing/`.
@@ -75,7 +75,7 @@ PYTHONPATH=src python -m acp_mailbox.watcher
 Before using VS Code, verify the ACP server directly over stdio:
 
 ```bash
-python scripts/acp_smoke_test.py
+python -m deepagent_acp.smoke_test
 ```
 
 Expected result: ACP initializes, a session is created, and the prompt returns `ACP_SMOKE_OK`.
@@ -88,7 +88,7 @@ Expected result: ACP initializes, a session is created, and the prompt returns `
   - `workspace_root: Path`
   - `callbacks: list[BaseCallbackHandler]`
 - The factory function must return a LangChain `BaseChatModel`.
-- The built-in default factory lives in [model_loader.py](/Users/kateanderson/Documents/Programming/acp/src/acp_mailbox/model_loader.py) and uses Gemini only as an example.
+- The built-in default factory lives in [model_loader.py](/Users/kateanderson/Documents/Programming/acp/deepagent_acp/model_loader.py) and uses Gemini only as an example.
 
 ## Operating model
 
@@ -107,7 +107,7 @@ Expected result: ACP initializes, a session is created, and the prompt returns `
 1. Start the poller:
 
 ```bash
-PYTHONPATH=src python -m acp_mailbox.watcher
+python -m deepagent_acp.watcher
 ```
 
 2. Create an incoming request:

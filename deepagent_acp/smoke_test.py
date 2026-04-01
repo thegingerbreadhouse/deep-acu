@@ -86,7 +86,7 @@ async def main() -> int:
     env = dict(os.environ)
     client = SmokeClient()
     python_path = os.environ.get("DEEPAGENT_PYTHON", sys.executable)
-    script_path = str((repo_root / "scripts" / "run_deepagent_acp.py").resolve())
+    script_path = str((repo_root / "deepagent_acp" / "server.py").resolve())
 
     async with spawn_agent_process(
         client,

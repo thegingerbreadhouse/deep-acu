@@ -114,7 +114,7 @@ def process_event(root: Path, event: MailboxEvent) -> Path:
         error_text = (
             "The ACP agent could not complete this request.\n\n"
             f"Error: `{type(exc).__name__}: {exc}`\n\n"
-            "Check `.acp/state/deepagent-acp.log` for runtime details."
+            "Check the dated ACP log file under `.acp/state/` for runtime details."
         )
         outgoing_path = write_outgoing_with_status(root, event.path, "error", error_text)
         turn_log.set_outgoing_file(outgoing_path)

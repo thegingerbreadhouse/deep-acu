@@ -20,6 +20,10 @@ from deepagents_acp.server import (
 from dotenv import load_dotenv
 from langgraph.checkpoint.memory import InMemorySaver
 
+REPO_ROOT = Path(__file__).resolve().parents[1]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
 
 def make_attempt_id() -> str:
     stamp = datetime.now(UTC).strftime("%H%M%S")
@@ -85,15 +89,12 @@ def parse_args() -> argparse.Namespace:
 def resolve_workspace(raw_workspace: str | None) -> Path:
     if raw_workspace:
         return Path(raw_workspace).resolve()
-    return Path(__file__).resolve().parents[1]
+    return REPO_ROOT
 
 
 def build_model(workspace_root: Path):
-    src_path = workspace_root / "src"
-    if str(src_path) not in sys.path:
-        sys.path.insert(0, str(src_path))
-    from acp_mailbox.langchain_observer import LangChainObservabilityHandler
-    from acp_mailbox.model_loader import load_chat_model
+    from deepagent_acp.langchain_observer import LangChainObservabilityHandler
+    from deepagent_acp.model_loader import load_chat_model
 
     return load_chat_model(
         workspace_root=workspace_root,
@@ -135,7 +136,7 @@ def run_check(workspace_root: Path, model: str | None, name: str, debug: bool) -
     install_placeholder_key_for_check(model)
     build_agent = agent_factory(workspace_root, model, name, debug)
     build_agent(AgentSessionContext(cwd=str(workspace_root), mode="default"))
-    model_factory = os.environ.get("DEEPAGENT_MODEL_FACTORY", "acp_mailbox.model_loader:build_default_chat_model")
+    model_factory = os.environ.get("DEEPAGENT_MODEL_FACTORY", "deepagent_acp.model_loader:build_default_chat_model")
     logging.info(
         "DeepAgent ACP check passed for workspace=%s model=%s model_factory=%s",
         workspace_root,

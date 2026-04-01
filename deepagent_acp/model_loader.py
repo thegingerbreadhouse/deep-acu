@@ -8,7 +8,7 @@ from typing import Any
 from langchain_core.callbacks.base import BaseCallbackHandler
 from langchain_core.language_models.chat_models import BaseChatModel
 
-DEFAULT_MODEL_FACTORY = "acp_mailbox.model_loader:build_default_chat_model"
+DEFAULT_MODEL_FACTORY = "deepagent_acp.model_loader:build_default_chat_model"
 DEFAULT_GEMINI_MODEL = "gemini-2.5-flash"
 
 

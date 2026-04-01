@@ -51,3 +51,4 @@ status: done
   - a raw LangChain event log under `.acp/state/observability/`
 - ACP server logs are written under `.acp/state/deepagent-acp-YYYY-MM-DD.log`.
 - Each ACP startup attempt appends a separator and attempt ID to that day's log file.
+- The poller entrypoint is `python -m deepagent_acp.watcher`.
