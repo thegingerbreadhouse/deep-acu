@@ -74,7 +74,9 @@ Expected result: ACP initializes, a session is created, and the prompt returns `
 - Copilot communicates with DeepAgent only by writing requests to `.acp/incoming/`.
 - DeepAgent responses for Copilot are written only to `.acp/outgoing/`.
 - The poller watches `.acp/incoming/`, invokes the ACP agent, and writes the response to `.acp/outgoing/`.
-- Each mailbox turn also writes a per-turn observability record to `.acp/state/observability/`.
+- Each mailbox turn also writes observability artifacts to `.acp/state/observability/`:
+  - `<turn-id>.json`: turn summary, status, session ID, token counts, reasoning-token counts
+  - `<turn-id>.events.jsonl`: raw LangChain model/tool events for that turn
 
 ## Mailbox sanity test
 

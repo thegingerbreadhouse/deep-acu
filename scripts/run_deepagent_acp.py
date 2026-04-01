@@ -5,6 +5,7 @@ import asyncio
 import logging
 import os
 from pathlib import Path
+import sys
 
 from deepagents import create_deep_agent
 from deepagents_acp.server import (
@@ -70,11 +71,18 @@ def resolve_workspace(raw_workspace: str | None) -> Path:
     return Path(__file__).resolve().parents[1]
 
 
-def build_model(model_name: str) -> ChatGoogleGenerativeAI:
+def build_model(model_name: str, workspace_root: Path) -> ChatGoogleGenerativeAI:
+    src_path = workspace_root / "src"
+    if str(src_path) not in sys.path:
+        sys.path.insert(0, str(src_path))
+    from acp_mailbox.langchain_observer import LangChainObservabilityHandler
+
     return ChatGoogleGenerativeAI(
         model=model_name,
         max_retries=2,
         temperature=1.0,
+        include_thoughts=True,
+        callbacks=[LangChainObservabilityHandler()],
     )
 
 
@@ -90,7 +98,7 @@ def agent_factory(
         session_root = Path(context.cwd or workspace_root).resolve()
         backend = FilesystemBackend(root_dir=session_root, virtual_mode=True)
         return create_deep_agent(
-            model=build_model(model),
+            model=build_model(model, workspace_root),
             name=name,
             debug=debug,
             memory=[str(memory_file)] if memory_file.exists() else None,

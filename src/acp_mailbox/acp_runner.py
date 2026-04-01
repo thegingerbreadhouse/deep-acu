@@ -97,6 +97,8 @@ async def run_agent_prompt(
         prompt=prompt,
         request_file=request_file,
     )
+    env["DEEPAGENT_TURN_ID"] = active_turn_log.turn_id
+    env["DEEPAGENT_OBSERVABILITY_EVENT_LOG"] = str(active_turn_log.events_path)
     client = CollectingClient(turn_log=active_turn_log)
     python_path = os.environ.get("DEEPAGENT_PYTHON", sys.executable)
     script_path = str((repo_root / "scripts" / "run_deepagent_acp.py").resolve())

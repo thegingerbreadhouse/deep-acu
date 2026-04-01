@@ -46,4 +46,6 @@ status: done
 - When a change is detected, it prompts the ACP agent with that request.
 - The poller writes the agent's answer to `.acp/outgoing/`.
 - If the ACP agent fails, the poller still writes an outgoing file with `status: error`.
-- Each turn also writes a JSON observability record under `.acp/state/observability/`.
+- Each turn also writes:
+  - a summary JSON record under `.acp/state/observability/`
+  - a raw LangChain event log under `.acp/state/observability/`
